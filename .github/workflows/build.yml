@@ -103,27 +103,25 @@ jobs:
               # 组装changelog
               CHANGELOG=""
               if [ ! -z "$FEAT_COMMITS" ]; then
-                  CHANGELOG="${CHANGELOG}## 功能改进\n${FEAT_COMMITS}\n\n"
+                  CHANGELOG+="### 功能改进\n$FEAT_COMMITS\n"
               fi
               if [ ! -z "$FIX_COMMITS" ]; then
-                  CHANGELOG="${CHANGELOG}## 问题修复\n${FIX_COMMITS}\n\n"
+                  CHANGELOG+="### 问题修复\n$FIX_COMMITS\n"
               fi
               if [ ! -z "$OTHER_COMMITS" ]; then
-                  CHANGELOG="${CHANGELOG}## 其他更新\n${OTHER_COMMITS}"
+                  CHANGELOG+="### 其他更新\n$OTHER_COMMITS"
               fi
           else
-              CHANGELOG="## 首次发布\n$(git log --pretty=format:"- %h %s (%an)" | grep -v "ci:" || true)"
+              CHANGELOG="### 首次发布\n$(git log --pretty=format:"- %h %s (%an)" | grep -v "ci:" || true)"
           fi
           
           # 如果changelog为空，添加默认信息
           if [ -z "$CHANGELOG" ]; then
-              CHANGELOG="## 无更新内容"
+              CHANGELOG="### 无更新内容"
           fi
           
-          # 处理换行符并输出
-          CHANGELOG="${CHANGELOG//'%'/'%25'}"
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+          # 输出
+          echo -e "$CHANGELOG"
           
           echo "changelog=${CHANGELOG}" >> $GITHUB_OUTPUT
         shell: bash
@@ -142,9 +140,9 @@ jobs:
         with:
           files: "nrfr-client/nrfr-${{ steps.version.outputs.version }}-release.zip"
           body: |
-            Nrfr ${{ steps.version.outputs.version }}
+            ## Nrfr ${{ steps.version.outputs.version }}
 
-            更新内容：
+            ## 更新内容：
             ${{ steps.version.outputs.changelog }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
