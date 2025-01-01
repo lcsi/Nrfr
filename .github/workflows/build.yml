@@ -91,22 +91,37 @@ jobs:
           
           if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
               LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
-              CHANGELOG=$(
-                echo "## 功能改进"
-                git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^feat" | grep -v "^-.*ci:"
-                echo "## 问题修复"
-                git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^fix" | grep -v "^-.*ci:"
-                echo "## 其他更新"
-                git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD | grep -v "^-.*(feat|fix|ci):"
-              )
+          
+              # 获取所有提交并过滤掉CI相关提交
+              ALL_COMMITS=$(git log --pretty=format:"%h %s (%an)" $LAST_TAG..HEAD | grep -v "ci:" || true)
+          
+              # 分别获取不同类型的提交
+              FEAT_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ feat:" || true)
+              FIX_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ fix:" || true)
+              OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v "^[a-f0-9]\+ \(feat:\|fix:\)" || true)
+          
+              # 组装changelog
+              CHANGELOG=""
+              if [ ! -z "$FEAT_COMMITS" ]; then
+                  CHANGELOG+="## 功能改进\n$FEAT_COMMITS\n"
+              fi
+              if [ ! -z "$FIX_COMMITS" ]; then
+                  CHANGELOG+="## 问题修复\n$FIX_COMMITS\n"
+              fi
+              if [ ! -z "$OTHER_COMMITS" ]; then
+                  CHANGELOG+="## 其他更新\n$OTHER_COMMITS"
+              fi
           else
-              CHANGELOG=$(
-                echo "## 首次发布"
-                git log --pretty=format:"- %h %s (%an)" | grep -v "^-.*ci:"
-              )
+              CHANGELOG="## 首次发布\n$(git log --pretty=format:"- %h %s (%an)" | grep -v "ci:" || true)"
           fi
+          
+          # 如果changelog为空，添加默认信息
+          if [ -z "$CHANGELOG" ]; then
+              CHANGELOG="## 无更新内容"
+          fi
+          
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG"
+          echo -e "$CHANGELOG"
           echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
@@ -129,4 +144,4 @@ jobs:
             更新内容：
             ${{ steps.version.outputs.changelog }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
