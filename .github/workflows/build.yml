@@ -82,6 +82,22 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk nrfr-client/build/bin/resources/nrfr.apk
         shell: bash
 
+      # 下载 platform-tools
+      - name: Download platform-tools
+        run: |
+          mkdir -p nrfr-client/build/bin/platform-tools
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            curl -L https://dl.google.com/android/repository/platform-tools-latest-windows.zip -o platform-tools.zip
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+            curl -L https://dl.google.com/android/repository/platform-tools-latest-linux.zip -o platform-tools.zip
+          else
+            curl -L https://dl.google.com/android/repository/platform-tools-latest-darwin.zip -o platform-tools.zip
+          fi
+          unzip platform-tools.zip
+          cp -r platform-tools/* nrfr-client/build/bin/platform-tools/
+          rm -rf platform-tools platform-tools.zip
+        shell: bash
+
       # 获取版本号和提交信息
       - name: Get Version Info
         id: version
