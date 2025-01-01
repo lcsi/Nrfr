@@ -87,21 +87,23 @@ jobs:
         id: version
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
-            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
-            echo "## 功能改进" >> $GITHUB_OUTPUT
-            git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^feat" >> $GITHUB_OUTPUT
-            echo -e "\n\n## 问题修复" >> $GITHUB_OUTPUT
-            git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^fix" >> $GITHUB_OUTPUT
-            echo -e "\n\n## 其他更新" >> $GITHUB_OUTPUT
-            git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^(feat|fix)" --invert-grep >> $GITHUB_OUTPUT
-          else
-            echo "## 首次发布" >> $GITHUB_OUTPUT
-            git log --pretty=format:"- %s" >> $GITHUB_OUTPUT
-          fi
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          {
+            echo 'changelog<<EOF'
+            if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
+              LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+              echo "## 功能改进"
+              git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^feat"
+              echo -e "\n## 问题修复"
+              git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^fix"
+              echo -e "\n## 其他更新"
+              git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^(feat|fix)" --invert-grep
+            else
+              echo "## 首次发布"
+              git log --pretty=format:"- %s"
+            fi
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
         shell: bash
 
       # 打包发布文件
