@@ -103,13 +103,13 @@ jobs:
               # 组装changelog
               CHANGELOG=""
               if [ ! -z "$FEAT_COMMITS" ]; then
-                  CHANGELOG+="## 功能改进\n$FEAT_COMMITS\n"
+                  CHANGELOG="${CHANGELOG}## 功能改进\n${FEAT_COMMITS}\n\n"
               fi
               if [ ! -z "$FIX_COMMITS" ]; then
-                  CHANGELOG+="## 问题修复\n$FIX_COMMITS\n"
+                  CHANGELOG="${CHANGELOG}## 问题修复\n${FIX_COMMITS}\n\n"
               fi
               if [ ! -z "$OTHER_COMMITS" ]; then
-                  CHANGELOG+="## 其他更新\n$OTHER_COMMITS"
+                  CHANGELOG="${CHANGELOG}## 其他更新\n${OTHER_COMMITS}"
               fi
           else
               CHANGELOG="## 首次发布\n$(git log --pretty=format:"- %h %s (%an)" | grep -v "ci:" || true)"
@@ -120,9 +120,12 @@ jobs:
               CHANGELOG="## 无更新内容"
           fi
           
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$CHANGELOG"
-          echo "EOF" >> $GITHUB_OUTPUT
+          # 处理换行符并输出
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+          
+          echo "changelog=${CHANGELOG}" >> $GITHUB_OUTPUT
         shell: bash
 
       # 打包发布文件
