@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/electricbubble/gadb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -18,6 +21,7 @@ type App struct {
 	ctx            context.Context
 	adbClient      gadb.Client
 	selectedDevice *gadb.Device
+	adbPath        string // 保存 adb 路径以便关闭时使用
 }
 
 // DeviceInfo 设备信息结构
@@ -45,20 +49,92 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// 尝试启动 ADB 服务器
+	execPath, err := os.Executable()
+	if err != nil {
+		wailsruntime.LogError(ctx, fmt.Sprintf("获取执行路径失败: %v", err))
+		return
+	}
+	execDir := filepath.Dir(execPath)
+
+	// 优先使用程序目录下的 platform-tools
+	adbPath := filepath.Join(execDir, "platform-tools", "adb")
+	if runtime.GOOS == "windows" {
+		adbPath = filepath.Join(execDir, "platform-tools", "adb.exe")
+	}
+
+	// 如果程序目录下的 adb 不存在，尝试使用系统环境中的 adb
+	if _, err := os.Stat(adbPath); os.IsNotExist(err) {
+		if runtime.GOOS == "windows" {
+			// 尝试从环境变量中获取 ANDROID_HOME
+			androidHome := os.Getenv("ANDROID_HOME")
+			if androidHome == "" {
+				// 如果没有环境变量，尝试从默认安装路径获取
+				androidHome = filepath.Join(os.Getenv("LOCALAPPDATA"), "Android", "Sdk")
+			}
+			adbPath = filepath.Join(androidHome, "platform-tools", "adb.exe")
+		} else {
+			adbPath = "adb" // 在类 Unix 系统上使用 PATH 中的 adb
+		}
+	}
+
+	// 保存 adb 路径
+	a.adbPath = adbPath
+
+	// 检查 ADB 服务器是否已在运行
+	cmd := exec.Command(adbPath, "devices")
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    true,
+			CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+		}
+	}
+	if err := cmd.Run(); err != nil {
+		// ADB 服务器未运行，启动它
+		startCmd := exec.Command(adbPath, "start-server")
+		if runtime.GOOS == "windows" {
+			startCmd.SysProcAttr = &syscall.SysProcAttr{
+				HideWindow:    true,
+				CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+			}
+		}
+		if err := startCmd.Run(); err != nil {
+			wailsruntime.LogError(ctx, fmt.Sprintf("启动ADB服务器失败: %v", err))
+		}
+	}
+
 	// 初始化 ADB 客户端
 	client, err := gadb.NewClient()
 	if err != nil {
-		runtime.LogError(ctx, fmt.Sprintf("初始化ADB失败: %v", err))
+		wailsruntime.LogError(ctx, fmt.Sprintf("初始化ADB失败: %v", err))
 		return
 	}
 	a.adbClient = client
+}
+
+// shutdown is called when the app is closing
+func (a *App) shutdown(ctx context.Context) {
+	// 关闭 ADB 服务器
+	if a.adbPath != "" {
+		cmd := exec.Command(a.adbPath, "kill-server")
+		if runtime.GOOS == "windows" {
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				HideWindow:    true,
+				CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+			}
+		}
+		if err := cmd.Run(); err != nil {
+			wailsruntime.LogError(ctx, fmt.Sprintf("关闭ADB服务器失败: %v", err))
+		}
+	}
 }
 
 // GetDevices 获取已连接的设备列表
 func (a *App) GetDevices() []DeviceInfo {
 	devices, err := a.adbClient.DeviceList()
 	if err != nil {
-		runtime.LogError(a.ctx, fmt.Sprintf("获取设备列表失败: %v", err))
+		wailsruntime.LogError(a.ctx, fmt.Sprintf("获取设备列表失败: %v", err))
 		return nil
 	}
 
@@ -182,7 +258,7 @@ func (a *App) InstallShizuku() error {
 	// 清理临时文件
 	_, err = a.selectedDevice.RunShellCommand("rm", remoteApk)
 	if err != nil {
-		runtime.LogWarning(a.ctx, fmt.Sprintf("清理临时文件失败: %v", err))
+		wailsruntime.LogWarning(a.ctx, fmt.Sprintf("清理临时文件失败: %v", err))
 	}
 
 	return nil
@@ -229,7 +305,7 @@ func (a *App) InstallNrfr() error {
 	// 清理临时文件
 	_, err = a.selectedDevice.RunShellCommand("rm", remoteApk)
 	if err != nil {
-		runtime.LogWarning(a.ctx, fmt.Sprintf("清理临时文件失败: %v", err))
+		wailsruntime.LogWarning(a.ctx, fmt.Sprintf("清理临时文件失败: %v", err))
 	}
 
 	return nil
@@ -255,23 +331,34 @@ func (a *App) StartShizuku() error {
 	if err != nil {
 		return fmt.Errorf("启动 shizuku 服务失败: %v", err)
 	}
-	runtime.LogInfo(a.ctx, fmt.Sprintf("shizuku 启动输出: %s", output))
+	wailsruntime.LogInfo(a.ctx, fmt.Sprintf("shizuku 启动输出: %s", output))
 	return nil
 }
 
 // WindowMinimise 最小化窗口
 func (a *App) WindowMinimise() {
-	runtime.WindowMinimise(a.ctx)
+	wailsruntime.WindowMinimise(a.ctx)
 }
 
 // WindowMaximise 最大化窗口
 func (a *App) WindowMaximise() {
-	runtime.WindowToggleMaximise(a.ctx)
+	wailsruntime.WindowToggleMaximise(a.ctx)
 }
 
 // WindowClose 关闭窗口
 func (a *App) WindowClose() {
-	runtime.Quit(a.ctx)
+	// 先关闭 ADB 服务器
+	if a.adbPath != "" {
+		cmd := exec.Command(a.adbPath, "kill-server")
+		if runtime.GOOS == "windows" {
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				HideWindow:    true,
+				CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+			}
+		}
+		_ = cmd.Run() // 忽略错误，因为我们即将退出程序
+	}
+	wailsruntime.Quit(a.ctx)
 }
 
 // StartNrfr 启动 Nrfr 应用
