@@ -123,7 +123,8 @@ jobs:
           # 输出
           echo -e "$CHANGELOG"
           
-          echo "changelog=${CHANGELOG}" >> $GITHUB_OUTPUT
+          # 使用 -e 参数设置输出变量
+          echo "changelog=$(echo -e "$CHANGELOG")" >> $GITHUB_OUTPUT
         shell: bash
 
       # 打包发布文件
@@ -140,8 +141,6 @@ jobs:
         with:
           files: "nrfr-client/nrfr-${{ steps.version.outputs.version }}-release.zip"
           body: |
-            ## Nrfr ${{ steps.version.outputs.version }}
-
             ## 更新内容：
             ${{ steps.version.outputs.changelog }}
         env:
