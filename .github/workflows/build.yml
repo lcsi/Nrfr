@@ -89,7 +89,18 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          git log --pretty=format:"- %h %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> $GITHUB_OUTPUT
+          if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
+            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+            echo "## 功能改进" >> $GITHUB_OUTPUT
+            git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^feat" >> $GITHUB_OUTPUT
+            echo -e "\n\n## 问题修复" >> $GITHUB_OUTPUT
+            git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^fix" >> $GITHUB_OUTPUT
+            echo -e "\n\n## 其他更新" >> $GITHUB_OUTPUT
+            git log --pretty=format:"- %s" $LAST_TAG..HEAD --grep="^(feat|fix)" --invert-grep >> $GITHUB_OUTPUT
+          else
+            echo "## 首次发布" >> $GITHUB_OUTPUT
+            git log --pretty=format:"- %s" >> $GITHUB_OUTPUT
+          fi
           echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
@@ -109,7 +120,7 @@ jobs:
           body: |
             Nrfr ${{ steps.version.outputs.version }}
 
-            Changes:
+            更新内容：
             ${{ steps.version.outputs.changelog }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
