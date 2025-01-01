@@ -35,7 +35,7 @@ jobs:
       # 构建 Android APK
       - name: Build Android APK
         run: |
-          cd app
+          gradle wrapper
           chmod +x ./gradlew
           ./gradlew assembleDebug
         shell: bash
