@@ -13,25 +13,13 @@
   </p>
 
   <p>
-    <a href="https://github.com/Ackites/Nrfr/stargazers">
       <img src="https://img.shields.io/github/stars/Ackites/Nrfr?style=flat" alt="Stars">
-    </a>
-    <a href="https://github.com/Ackites/Nrfr/network/members">
       <img src="https://img.shields.io/github/forks/Ackites/Nrfr?style=flat" alt="Forks">
-    </a>
-    <a href="https://github.com/Ackites/Nrfr/issues">
       <img src="https://img.shields.io/github/issues/Ackites/Nrfr?style=flat" alt="Issues">
-    </a>
-    <img src="https://img.shields.io/github/last-commit/Ackites/Nrfr?style=flat" alt="Last Commit">
-    <a href="https://github.com/Ackites/Nrfr/releases">
+      <img src="https://img.shields.io/github/last-commit/Ackites/Nrfr?style=flat" alt="Last Commit">
       <img src="https://img.shields.io/github/release/Ackites/Nrfr?style=flat" alt="Release">
-    </a>
-    <a href="https://github.com/Ackites/Nrfr/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/Ackites/Nrfr?style=flat" alt="License">
-    </a>
-    <a href="https://x.com/intent/follow?screen_name=actkites">
       <img src="https://img.shields.io/badge/Follow-@actkites-1DA1F2?logo=x&style=flat" alt="Follow on X">
-    </a>
   </p>
 </div>
 
