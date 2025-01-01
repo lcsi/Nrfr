@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,15 @@ type DeviceInfo struct {
 	State   string `json:"state"`
 	Product string `json:"product"`
 	Model   string `json:"model"`
+}
+
+// AppStatus 应用状态结构
+type AppStatus struct {
+	Shizuku bool `json:"shizuku"`
+	Nrfr    struct {
+		Installed  bool `json:"installed"`
+		NeedUpdate bool `json:"needUpdate"`
+	} `json:"nrfr"`
 }
 
 // NewApp creates a new App application struct
@@ -86,22 +96,40 @@ func (a *App) SelectDevice(serial string) error {
 }
 
 // CheckApps 检查必要的应用是否已安装
-func (a *App) CheckApps() map[string]bool {
+func (a *App) CheckApps() AppStatus {
 	if a.selectedDevice == nil {
-		return nil
+		return AppStatus{
+			Shizuku: false,
+			Nrfr: struct {
+				Installed  bool `json:"installed"`
+				NeedUpdate bool `json:"needUpdate"`
+			}{
+				Installed:  false,
+				NeedUpdate: false,
+			},
+		}
 	}
 
-	packages := map[string]string{
-		"shizuku": "moe.shizuku.privileged.api",
-		"nrfr":    "com.github.nrfr",
+	// 检查 Shizuku
+	shizukuInstalled, _ := a.isPackageInstalled("moe.shizuku.privileged.api")
+
+	// 检查 Nrfr
+	nrfrInstalled, _ := a.isPackageInstalled("com.github.nrfr")
+	needUpdate := false
+	if nrfrInstalled {
+		needUpdate, _ = a.CheckNrfrUpdate()
 	}
 
-	result := make(map[string]bool)
-	for name, pkg := range packages {
-		installed, _ := a.isPackageInstalled(pkg)
-		result[name] = installed
+	return AppStatus{
+		Shizuku: shizukuInstalled,
+		Nrfr: struct {
+			Installed  bool `json:"installed"`
+			NeedUpdate bool `json:"needUpdate"`
+		}{
+			Installed:  nrfrInstalled,
+			NeedUpdate: needUpdate,
+		},
 	}
-	return result
 }
 
 // isPackageInstalled 检查包是否已安装
@@ -259,4 +287,86 @@ func (a *App) StartNrfr() error {
 	}
 
 	return nil
+}
+
+// GetAppVersion 获取已安装应用的版本号
+func (a *App) GetAppVersion(packageName string) (string, error) {
+	if a.selectedDevice == nil {
+		return "", fmt.Errorf("未选择设备")
+	}
+
+	output, err := a.selectedDevice.RunShellCommand("dumpsys", "package", packageName, "|", "grep", "versionName")
+	if err != nil {
+		return "", fmt.Errorf("获取版本号失败: %v", err)
+	}
+
+	// 解析版本号
+	parts := strings.Split(strings.TrimSpace(output), "=")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("解析版本号失败")
+	}
+	return strings.TrimSpace(parts[1]), nil
+}
+
+// compareVersions 比较两个版本号，如果 v1 < v2 返回 -1，v1 = v2 返回 0，v1 > v2 返回 1
+func compareVersions(v1, v2 string) int {
+	// 移除可能的 'v' 前缀
+	v1 = strings.TrimPrefix(v1, "v")
+	v2 = strings.TrimPrefix(v2, "v")
+
+	// 分割版本号
+	parts1 := strings.Split(v1, ".")
+	parts2 := strings.Split(v2, ".")
+
+	// 确保两个版本号都有三个部分
+	for len(parts1) < 3 {
+		parts1 = append(parts1, "0")
+	}
+	for len(parts2) < 3 {
+		parts2 = append(parts2, "0")
+	}
+
+	// 比较每个部分
+	for i := 0; i < 3; i++ {
+		num1, _ := strconv.Atoi(parts1[i])
+		num2, _ := strconv.Atoi(parts2[i])
+
+		if num1 < num2 {
+			return -1
+		}
+		if num1 > num2 {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+// CheckNrfrUpdate 检查Nrfr是否需要更新
+func (a *App) CheckNrfrUpdate() (bool, error) {
+	if a.selectedDevice == nil {
+		return false, fmt.Errorf("未选择设备")
+	}
+
+	// 检查是否已安装
+	installed, err := a.isPackageInstalled("com.github.nrfr")
+	if err != nil {
+		return false, err
+	}
+
+	if !installed {
+		return true, nil // 未安装，需要安装
+	}
+
+	// 获取已安装版本
+	currentVersion, err := a.GetAppVersion("com.github.nrfr")
+	if err != nil {
+		return false, err
+	}
+
+	// 最新版本号（从build.gradle.kts中获取）
+	latestVersion := "1.0.1" // 这里硬编码为当前最新版本
+
+	// 比较版本号
+	return compareVersions(currentVersion, latestVersion) < 0, nil
 }

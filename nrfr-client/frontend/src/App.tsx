@@ -15,7 +15,13 @@ function App() {
     const [step, setStep] = useState<Step>(1);
     const [devices, setDevices] = useState<DeviceInfo[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<DeviceInfo | null>(null);
-    const [appsStatus, setAppsStatus] = useState<AppStatus>({});
+    const [appsStatus, setAppsStatus] = useState<AppStatus>({
+        shizuku: false,
+        nrfr: {
+            installed: false,
+            needUpdate: false
+        }
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -62,21 +68,43 @@ function App() {
         try {
             setIsLoading(true);
             setError('');
-            if (!appsStatus['shizuku']) {
+
+            // 只安装必需的应用
+            if (!appsStatus.shizuku) {
                 await InstallShizuku();
             }
-            if (!appsStatus['nrfr']) {
+            if (!appsStatus.nrfr.installed) {
                 await InstallNrfr();
             }
+
+            // 检查安装结果
             const newStatus = await CheckApps();
             setAppsStatus(newStatus);
-            if (newStatus['shizuku'] && newStatus['nrfr']) {
-                setStep(4);
-            } else {
+
+            // 只验证必需应用是否安装成功
+            if (!newStatus.shizuku || !newStatus.nrfr.installed) {
                 setError('部分应用安装失败，请重试');
             }
         } catch (err: any) {
             setError(err.message || '安装应用失败');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleUpdateApp = async () => {
+        try {
+            setIsLoading(true);
+            setError('');
+
+            // 执行更新
+            await InstallNrfr();
+
+            // 检查更新结果
+            const newStatus = await CheckApps();
+            setAppsStatus(newStatus);
+        } catch (err: any) {
+            setError(err.message || '更新应用失败');
         } finally {
             setIsLoading(false);
         }
@@ -93,6 +121,23 @@ function App() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleAppCheck = async () => {
+        try {
+            const status = await CheckApps();
+            setAppsStatus(status);
+        } catch (err: any) {
+            setError(err.message || '检查应用状态失败');
+        }
+    };
+
+    const handleNext = async (nextStep: Step) => {
+        if (nextStep === 3) {
+            // 在切换到步骤3之前先检查状态
+            await handleAppCheck();
+        }
+        setStep(nextStep);
     };
 
     const renderStepContent = () => {
@@ -115,7 +160,7 @@ function App() {
                     <AppCheck
                         device={selectedDevice!}
                         appsStatus={appsStatus}
-                        onNext={() => setStep(3)}
+                        onNext={() => handleNext(3)}
                     />
                 );
             case 3:
@@ -125,6 +170,8 @@ function App() {
                         appsStatus={appsStatus}
                         isLoading={isLoading}
                         onInstall={handleInstallApps}
+                        onUpdate={handleUpdateApp}
+                        onNext={() => handleNext(4)}
                     />
                 );
             case 4:

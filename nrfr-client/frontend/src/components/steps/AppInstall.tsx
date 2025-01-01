@@ -6,9 +6,18 @@ interface Props {
     appsStatus: AppStatus;
     isLoading: boolean;
     onInstall: () => void;
+    onUpdate: () => void;
+    onNext: () => void;
 }
 
-export const AppInstall: React.FC<Props> = ({device, appsStatus, isLoading, onInstall}) => {
+export const AppInstall: React.FC<Props> = ({device, appsStatus, isLoading, onInstall, onUpdate, onNext}) => {
+    // 只有完全没安装的应用才是必需操作
+    const needsRequiredAction = !appsStatus.shizuku || !appsStatus.nrfr.installed;
+    // 有可更新的应用
+    const hasOptionalUpdate = appsStatus.nrfr.installed && appsStatus.nrfr.needUpdate;
+    // 安装完成（不考虑更新状态）
+    const isComplete = appsStatus.shizuku && appsStatus.nrfr.installed;
+
     return (
         <div className="space-y-4">
             <h2 className="text-xl font-semibold text-center">安装应用</h2>
@@ -16,7 +25,7 @@ export const AppInstall: React.FC<Props> = ({device, appsStatus, isLoading, onIn
                 当前设备：{device.model || '未知设备'} ({device.serial})
             </div>
             <div className="space-y-2">
-                {!appsStatus['shizuku'] && (
+                {!appsStatus.shizuku && (
                     <div className="p-4 bg-white/50 backdrop-blur-sm rounded-lg flex justify-between items-center">
                         <span>需要安装 Shizuku</span>
                         {isLoading && (
@@ -32,7 +41,7 @@ export const AppInstall: React.FC<Props> = ({device, appsStatus, isLoading, onIn
                         )}
                     </div>
                 )}
-                {!appsStatus['nrfr'] && (
+                {!appsStatus.nrfr.installed && (
                     <div className="p-4 bg-white/50 backdrop-blur-sm rounded-lg flex justify-between items-center">
                         <span>需要安装 Nrfr</span>
                         {isLoading && (
@@ -48,14 +57,61 @@ export const AppInstall: React.FC<Props> = ({device, appsStatus, isLoading, onIn
                         )}
                     </div>
                 )}
+                {isComplete && (
+                    <div className="p-4 bg-green-50 backdrop-blur-sm rounded-lg">
+                        <div className="flex items-center justify-center text-green-600">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>所有必需应用已安装完成</span>
+                        </div>
+                    </div>
+                )}
+                {hasOptionalUpdate && (
+                    <div className="p-4 bg-white/50 backdrop-blur-sm rounded-lg">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor"
+                                     viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <span>发现 Nrfr 新版本可用</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-            <button
-                className="w-full bg-blue-500/80 hover:bg-blue-600/80 text-white font-medium py-2 px-4 rounded-lg transition-all"
-                onClick={onInstall}
-                disabled={isLoading}
-            >
-                {isLoading ? '安装中...' : '开始安装'}
-            </button>
+            <div className="flex flex-col gap-2">
+                {needsRequiredAction && (
+                    <button
+                        className="w-full bg-blue-500/80 hover:bg-blue-600/80 text-white font-medium py-2 px-4 rounded-lg transition-all"
+                        onClick={onInstall}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? '安装中...' : '安装必需应用'}
+                    </button>
+                )}
+                {hasOptionalUpdate && !needsRequiredAction && (
+                    <button
+                        className="w-full bg-blue-500/80 hover:bg-blue-600/80 text-white font-medium py-2 px-4 rounded-lg transition-all"
+                        onClick={onUpdate}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? '更新中...' : '更新到最新版本'}
+                    </button>
+                )}
+                {isComplete && (
+                    <button
+                        className="w-full bg-blue-500/80 hover:bg-blue-600/80 text-white font-medium py-2 px-4 rounded-lg transition-all"
+                        onClick={onNext}
+                        disabled={isLoading}
+                    >
+                        继续下一步 {hasOptionalUpdate ? '(暂不更新)' : ''}
+                    </button>
+                )}
+            </div>
         </div>
     );
 };

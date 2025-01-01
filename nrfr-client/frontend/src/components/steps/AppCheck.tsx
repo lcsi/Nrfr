@@ -26,10 +26,10 @@ export const AppCheck: React.FC<Props> = ({device, appsStatus, onNext}) => {
                     <div className="flex justify-between items-center">
                         <span>Shizuku</span>
                         <div className="flex items-center">
-                            <span className={appsStatus['shizuku'] ? 'text-green-500' : 'text-red-500'}>
-                                {appsStatus['shizuku'] ? '已安装' : '未安装'}
+                            <span className={appsStatus.shizuku ? 'text-green-500' : 'text-red-500'}>
+                                {appsStatus.shizuku ? '已安装' : '未安装'}
                             </span>
-                            {appsStatus['shizuku'] && (
+                            {appsStatus.shizuku && (
                                 <svg className="w-5 h-5 ml-2 text-green-500" fill="none" stroke="currentColor"
                                      viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -43,10 +43,10 @@ export const AppCheck: React.FC<Props> = ({device, appsStatus, onNext}) => {
                     <div className="flex justify-between items-center">
                         <span>Nrfr</span>
                         <div className="flex items-center">
-                            <span className={appsStatus['nrfr'] ? 'text-green-500' : 'text-red-500'}>
-                                {appsStatus['nrfr'] ? '已安装' : '未安装'}
+                            <span className={appsStatus.nrfr.installed ? 'text-green-500' : 'text-red-500'}>
+                                {appsStatus.nrfr.installed ? '已安装' : '未安装'}
                             </span>
-                            {appsStatus['nrfr'] && (
+                            {appsStatus.nrfr.installed && (
                                 <svg className="w-5 h-5 ml-2 text-green-500" fill="none" stroke="currentColor"
                                      viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -67,3 +67,4 @@ export const AppCheck: React.FC<Props> = ({device, appsStatus, onNext}) => {
         </div>
     );
 };
+

@@ -6,6 +6,14 @@ export function CheckApps() {
     return window['go']['main']['App']['CheckApps']();
 }
 
+export function CheckNrfrUpdate() {
+    return window['go']['main']['App']['CheckNrfrUpdate']();
+}
+
+export function GetAppVersion(arg1) {
+    return window['go']['main']['App']['GetAppVersion'](arg1);
+}
+
 export function GetDevices() {
     return window['go']['main']['App']['GetDevices']();
 }
