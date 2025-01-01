@@ -88,19 +88,25 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          
           if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
               LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
-              echo "## 功能改进"
-              git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^feat" | grep -v "^-.*ci:" || true
-              echo "## 问题修复"
-              git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^fix" | grep -v "^-.*ci:" || true
-              echo "## 其他更新"
-              git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^(feat|fix)" --invert-grep | grep -v "^-.*ci:" || true
+              CHANGELOG=$(
+                echo "## 功能改进"
+                git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^feat" | grep -v "^-.*ci:"
+                echo "## 问题修复"
+                git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD --grep="^fix" | grep -v "^-.*ci:"
+                echo "## 其他更新"
+                git log --pretty=format:"- %h %s (%an)" $LAST_TAG..HEAD | grep -v "^-.*(feat|fix|ci):"
+              )
           else
-              echo "## 首次发布"
-              git log --pretty=format:"- %h %s (%an)" | grep -v "^-.*ci:" || true
+              CHANGELOG=$(
+                echo "## 首次发布"
+                git log --pretty=format:"- %h %s (%an)" | grep -v "^-.*ci:"
+              )
           fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG"
           echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
