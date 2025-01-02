@@ -18,9 +18,15 @@
       <img src="https://img.shields.io/github/issues/Ackites/Nrfr?style=flat" alt="Issues">
       <img src="https://img.shields.io/github/last-commit/Ackites/Nrfr?style=flat" alt="Last Commit">
       <img src="https://img.shields.io/github/release/Ackites/Nrfr?style=flat" alt="Release">
+      <img src="https://img.shields.io/github/downloads/Ackites/Nrfr/total?style=flat" alt="Downloads">
       <img src="https://img.shields.io/github/license/Ackites/Nrfr?style=flat" alt="License">
       <img src="https://img.shields.io/badge/Follow-@actkites-1DA1F2?logo=x&style=flat" alt="Follow on X">
   </p>
+
+  <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin: 20px 0;">
+    <img src="docs/images/client.png" alt="快速启动工具界面" width="500">
+    <img src="docs/images/app.png" alt="Android 应用界面" width="220">
+  </div>
 </div>
 
 Nrfr 是一款强大的 SIM 卡国家码修改工具，无需 Root 即可修改 SIM 卡国家码。通过修改国家码，你可以：
