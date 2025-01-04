@@ -108,8 +108,8 @@ jobs:
           if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
               LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
           
-              # 获取所有提交并过滤掉CI相关提交
-              ALL_COMMITS=$(git log --pretty=format:"%h %s (%an)" $LAST_TAG..HEAD | grep -v "ci:" || true)
+              # 获取所有提交并过滤掉CI相关提交和文档提交
+              ALL_COMMITS=$(git log --pretty=format:"%h %s (%an)" $LAST_TAG..HEAD | grep -v -E "ci:|docs:" || true)
           
               # 分别获取不同类型的提交
               FEAT_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ feat:" || true)
