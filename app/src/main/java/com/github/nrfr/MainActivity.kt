@@ -11,6 +11,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -20,7 +22,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.nrfr.ui.theme.NrfrTheme
@@ -272,8 +277,13 @@ fun MainScreen(onShowAbout: () -> Unit) {
     val context = LocalContext.current
     var selectedSimCard by remember { mutableStateOf<SimCardInfo?>(null) }
     var selectedCountryCode by remember { mutableStateOf("") }
+    var customCountryCode by remember { mutableStateOf("") }
+    var isCustomCountryCode by remember { mutableStateOf(false) }
+    var selectedCarrier by remember { mutableStateOf<CarrierConfigManager.PresetCarriers.CarrierPreset?>(null) }
+    var customCarrierName by remember { mutableStateOf("") }
     var isSimCardMenuExpanded by remember { mutableStateOf(false) }
     var isCountryCodeMenuExpanded by remember { mutableStateOf(false) }
+    var isCarrierMenuExpanded by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     // 获取实际的 SIM 卡信息
@@ -446,9 +456,12 @@ fun MainScreen(onShowAbout: () -> Unit) {
                 onExpandedChange = { isCountryCodeMenuExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = if (selectedCountryCode.isEmpty()) ""
-                    else countryCodes.find { it.code == selectedCountryCode }?.let { "${it.name} (${it.code})" }
-                        ?: selectedCountryCode,
+                    value = when {
+                        isCustomCountryCode -> "自定义"
+                        selectedCountryCode.isEmpty() -> ""
+                        else -> countryCodes.find { it.code == selectedCountryCode }?.let { "${it.name} (${it.code})" }
+                            ?: selectedCountryCode
+                    },
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("选择国家码") },
@@ -461,16 +474,611 @@ fun MainScreen(onShowAbout: () -> Unit) {
                     expanded = isCountryCodeMenuExpanded,
                     onDismissRequest = { isCountryCodeMenuExpanded = false }
                 ) {
+                    // 预设国家码列表
                     countryCodes.forEach { countryInfo ->
                         DropdownMenuItem(
                             text = { Text("${countryInfo.name} (${countryInfo.code})") },
                             onClick = {
                                 selectedCountryCode = countryInfo.code
+                                isCustomCountryCode = false
                                 isCountryCodeMenuExpanded = false
                             }
                         )
                     }
+                    // 自定义选项
+                    DropdownMenuItem(
+                        text = { Text("自定义") },
+                        onClick = {
+                            isCustomCountryCode = true
+                            selectedCountryCode = customCountryCode
+                            isCountryCodeMenuExpanded = false
+                        }
+                    )
                 }
+            }
+
+            // 自定义国家码输入框
+            if (isCustomCountryCode) {
+                val focusManager = LocalFocusManager.current
+                OutlinedTextField(
+                    value = customCountryCode,
+                    onValueChange = {
+                        if (it.length <= 2 && it.all { char -> char.isLetter() }) {
+                            customCountryCode = it.uppercase()
+                            selectedCountryCode = it.uppercase()
+                        }
+                    },
+                    label = { Text("自定义国家码 (2位字母)") },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // 运营商选择
+            ExposedDropdownMenuBox(
+                expanded = isCarrierMenuExpanded,
+                onExpandedChange = { isCarrierMenuExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedCarrier?.name ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("选择运营商") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCarrierMenuExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = isCarrierMenuExpanded,
+                    onDismissRequest = { isCarrierMenuExpanded = false }
+                ) {
+                    // 分组显示运营商
+                    // 中国大陆
+                    Text(
+                        "中国大陆",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "CN" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 中国香港
+                    Text(
+                        "中国香港",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "HK" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 中国澳门
+                    Text(
+                        "中国澳门",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "MO" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 中国台湾
+                    Text(
+                        "中国台湾",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "TW" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 日本
+                    Text(
+                        "日本",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "JP" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 韩国
+                    Text(
+                        "韩国",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "KR" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 新加坡
+                    Text(
+                        "新加坡",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "SG" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 马来西亚
+                    Text(
+                        "马来西亚",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "MY" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 泰国
+                    Text(
+                        "泰国",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "TH" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 越南
+                    Text(
+                        "越南",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "VN" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 印度尼西亚
+                    Text(
+                        "印度尼西亚",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "ID" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 菲律宾
+                    Text(
+                        "菲律宾",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "PH" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 印度
+                    Text(
+                        "印度",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "IN" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 澳大利亚
+                    Text(
+                        "澳大利亚",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "AU" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 美国
+                    Text(
+                        "美国",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "US" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 加拿大
+                    Text(
+                        "加拿大",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "CA" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 英国
+                    Text(
+                        "英国",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "GB" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 德国
+                    Text(
+                        "德国",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "DE" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 法国
+                    Text(
+                        "法国",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "FR" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 意大利
+                    Text(
+                        "意大利",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "IT" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 西班牙
+                    Text(
+                        "西班牙",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "ES" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 俄罗斯
+                    Text(
+                        "俄罗斯",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "RU" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 巴西
+                    Text(
+                        "巴西",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter { it.region == "BR" }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.name) },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // 其他地区
+                    Text(
+                        "其他地区",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    CarrierConfigManager.PresetCarriers.presets
+                        .filter {
+                            it.region !in listOf(
+                                "CN", "HK", "MO", "TW", "JP", "KR",
+                                "SG", "MY", "TH", "VN", "ID", "PH", "IN",
+                                "GB", "DE", "FR", "IT", "ES", "RU",
+                                "US", "CA", "BR", "AU", ""
+                            )
+                        }
+                        .forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text("${preset.name} (${preset.region})") },
+                                onClick = {
+                                    selectedCarrier = preset
+                                    customCarrierName = preset.displayName
+                                    isCarrierMenuExpanded = false
+                                }
+                            )
+                        }
+
+                    // 自定义选项
+                    if (CarrierConfigManager.PresetCarriers.presets.any { it.region.isEmpty() }) {
+                        Divider(modifier = Modifier.padding(vertical = 4.dp))
+                        CarrierConfigManager.PresetCarriers.presets
+                            .filter { it.region.isEmpty() }
+                            .forEach { preset ->
+                                DropdownMenuItem(
+                                    text = { Text(preset.name) },
+                                    onClick = {
+                                        selectedCarrier = preset
+                                        isCarrierMenuExpanded = false
+                                    }
+                                )
+                            }
+                    }
+                }
+            }
+
+            // 自定义运营商名称输入框
+            if (selectedCarrier?.name == "自定义") {
+                OutlinedTextField(
+                    value = customCarrierName,
+                    onValueChange = { customCarrierName = it },
+                    label = { Text("自定义运营商名称") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -487,8 +1095,10 @@ fun MainScreen(onShowAbout: () -> Unit) {
                             try {
                                 CarrierConfigManager.resetCarrierConfig(simCard.subId)
                                 Toast.makeText(context, "设置已还原", Toast.LENGTH_SHORT).show()
-                                refreshTrigger += 1  // 触发重新获取配置
+                                refreshTrigger += 1
                                 selectedCountryCode = ""
+                                selectedCarrier = null
+                                customCarrierName = ""
                             } catch (e: Exception) {
                                 Toast.makeText(context, "还原失败: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
@@ -505,16 +1115,34 @@ fun MainScreen(onShowAbout: () -> Unit) {
                     onClick = {
                         selectedSimCard?.let { simCard ->
                             try {
-                                CarrierConfigManager.setCarrierConfig(simCard.subId, selectedCountryCode)
+                                val carrierName = if (selectedCarrier?.name == "自定义") {
+                                    customCarrierName.takeIf { it.isNotEmpty() }
+                                } else {
+                                    selectedCarrier?.displayName
+                                }
+                                val countryCode = if (isCustomCountryCode) {
+                                    customCountryCode.takeIf { it.length == 2 }
+                                } else {
+                                    selectedCountryCode
+                                }
+                                CarrierConfigManager.setCarrierConfig(
+                                    simCard.subId,
+                                    countryCode,
+                                    carrierName
+                                )
                                 Toast.makeText(context, "设置已保存", Toast.LENGTH_SHORT).show()
-                                refreshTrigger += 1  // 触发重新获取配置
+                                refreshTrigger += 1
                             } catch (e: Exception) {
                                 Toast.makeText(context, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = selectedSimCard != null
+                    enabled = selectedSimCard != null && (
+                            (isCustomCountryCode && customCountryCode.length == 2) ||
+                                    (!isCustomCountryCode && selectedCountryCode.isNotEmpty()) ||
+                                    (selectedCarrier != null && (selectedCarrier?.name != "自定义" || customCarrierName.isNotEmpty()))
+                            )
                 ) {
                     Text("保存生效")
                 }
