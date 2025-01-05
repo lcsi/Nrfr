@@ -1,6 +1,7 @@
 package com.github.nrfr.manager
 
 import android.content.Context
+import android.os.Build
 import android.os.PersistableBundle
 import android.telephony.CarrierConfigManager
 import android.telephony.SubscriptionManager
@@ -63,7 +64,24 @@ object CarrierConfigManager {
     private fun getCarrierNameBySubId(context: Context, subId: Int): String {
         val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
             ?: return ""
-        return telephonyManager.getNetworkOperatorName(subId)
+
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10 及以上使用新 API
+                telephonyManager.getNetworkOperatorName(subId)
+            } else {
+                // Android 8-9 使用反射获取运营商名称
+                val createForSubscriptionId = TelephonyManager::class.java.getMethod(
+                    "createForSubscriptionId",
+                    Int::class.javaPrimitiveType
+                )
+                val subTelephonyManager = createForSubscriptionId.invoke(telephonyManager, subId) as TelephonyManager
+                subTelephonyManager.networkOperatorName
+            }
+        } catch (e: Exception) {
+            // 如果获取失败，回退到默认的 TelephonyManager
+            telephonyManager.networkOperatorName
+        }
     }
 
     fun setCarrierConfig(subId: Int, countryCode: String?, carrierName: String? = null) {
@@ -101,4 +119,4 @@ object CarrierConfigManager {
         )
         carrierConfigLoader.overrideConfig(subId, bundle, true)
     }
-} 
+}
