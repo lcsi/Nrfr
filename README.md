@@ -4,7 +4,7 @@
 
   <p>
     <img src="https://img.shields.io/badge/platform-Android-3DDC84?logo=android" alt="Platform">
-    <img src="https://img.shields.io/badge/Android-12+-3DDC84?logo=android" alt="Android Version">
+    <img src="https://img.shields.io/badge/Android-8+-3DDC84?logo=android" alt="Android Version">
     <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go" alt="Go Version">
     <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" alt="React Version">
     <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" alt="TypeScript Version">
