@@ -18,12 +18,57 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 获取版本号和提交信息
+      - name: Get Version Info
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
+              LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+
+              # 获取所有提交并过滤掉CI相关提交和文档提交
+              ALL_COMMITS=$(git log --pretty=format:"%h %s (%an)" $LAST_TAG..HEAD | grep -v -E "ci:|docs:" || true)
+
+              # 分别获取不同类型的提交
+              FEAT_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ feat:" || true)
+              FIX_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ fix:" || true)
+              OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v "^[a-f0-9]\+ \(feat:\|fix:\)" || true)
+
+              # 组装changelog
+              CHANGELOG=""
+              if [ ! -z "$FEAT_COMMITS" ]; then
+                  CHANGELOG+="### 功能改进\n$FEAT_COMMITS\n"
+              fi
+              if [ ! -z "$FIX_COMMITS" ]; then
+                  CHANGELOG+="### 问题修复\n$FIX_COMMITS\n"
+              fi
+              if [ ! -z "$OTHER_COMMITS" ]; then
+                  CHANGELOG+="### 其他更新\n$OTHER_COMMITS"
+              fi
+          else
+              CHANGELOG="### 首次发布\n$(git log --pretty=format:"- %h %s (%an)" | grep -v "ci:" || true)"
+          fi
+
+          # 如果changelog为空，添加默认信息
+          if [ -z "$CHANGELOG" ]; then
+              CHANGELOG="### 无更新内容"
+          fi
+
+          # 输出
+          echo -e "$CHANGELOG"
+
+          # 将 changelog 写入文件
+          echo -e "$CHANGELOG" > CHANGELOG.md
+        shell: bash
+
       # 设置 Java 环境
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       # 设置 Android SDK
       - name: Set up Android SDK
@@ -48,13 +93,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       # 设置 Node.js 环境
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '21'
+          node-version: "21"
 
       # 安装 Wails
       - name: Install Wails
@@ -80,6 +125,7 @@ jobs:
       - name: Copy Android APK
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk nrfr-client/build/bin/resources/nrfr.apk
+          cp app/build/outputs/apk/debug/app-debug.apk nrfr-${{ steps.version.outputs.version }}.apk
         shell: bash
 
       # 下载 platform-tools
@@ -98,51 +144,6 @@ jobs:
           rm -rf platform-tools platform-tools.zip
         shell: bash
 
-      # 获取版本号和提交信息
-      - name: Get Version Info
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          
-          if git rev-list --tags --max-count=1 > /dev/null 2>&1; then
-              LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          
-              # 获取所有提交并过滤掉CI相关提交和文档提交
-              ALL_COMMITS=$(git log --pretty=format:"%h %s (%an)" $LAST_TAG..HEAD | grep -v -E "ci:|docs:" || true)
-          
-              # 分别获取不同类型的提交
-              FEAT_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ feat:" || true)
-              FIX_COMMITS=$(echo "$ALL_COMMITS" | grep "^[a-f0-9]\+ fix:" || true)
-              OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v "^[a-f0-9]\+ \(feat:\|fix:\)" || true)
-          
-              # 组装changelog
-              CHANGELOG=""
-              if [ ! -z "$FEAT_COMMITS" ]; then
-                  CHANGELOG+="### 功能改进\n$FEAT_COMMITS\n"
-              fi
-              if [ ! -z "$FIX_COMMITS" ]; then
-                  CHANGELOG+="### 问题修复\n$FIX_COMMITS\n"
-              fi
-              if [ ! -z "$OTHER_COMMITS" ]; then
-                  CHANGELOG+="### 其他更新\n$OTHER_COMMITS"
-              fi
-          else
-              CHANGELOG="### 首次发布\n$(git log --pretty=format:"- %h %s (%an)" | grep -v "ci:" || true)"
-          fi
-          
-          # 如果changelog为空，添加默认信息
-          if [ -z "$CHANGELOG" ]; then
-              CHANGELOG="### 无更新内容"
-          fi
-          
-          # 输出
-          echo -e "$CHANGELOG"
-          
-          # 将 changelog 写入文件
-          echo -e "$CHANGELOG" > CHANGELOG.md
-        shell: bash
-
       # 打包发布文件
       - name: Create Release Archive
         run: |
@@ -155,7 +156,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: "nrfr-client/nrfr-${{ steps.version.outputs.version }}-release.zip"
+          files: |
+            nrfr-client/nrfr-${{ steps.version.outputs.version }}-release.zip
+            nrfr-${{ steps.version.outputs.version }}.apk
           body_path: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
