@@ -209,3 +209,5 @@ cd app
 ## 🙏 鸣谢
 
 - [Shizuku](https://shizuku.rikka.app/) - 感谢 Shizuku 提供的特权服务支持
+
+[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
