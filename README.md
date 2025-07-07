@@ -209,3 +209,13 @@ cd app
 ## 🙏 鸣谢
 
 - [Shizuku](https://shizuku.rikka.app/) - 感谢 Shizuku 提供的特权服务支持
+
+## 🚀 赞助商
+
+<div>
+  <p><strong>本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助</strong></p>
+  <a href="https://edgeone.ai/zh?from=github" target="_blank">
+    <img src="https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png" alt="Tencent EdgeOne" width="200">
+  </a>
+  <p><a href="https://edgeone.ai/zh?from=github" target="_blank">亚洲最佳CDN、边缘和安全解决方案 - Tencent EdgeOne</a></p>
+</div>
