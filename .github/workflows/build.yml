@@ -92,6 +92,7 @@ jobs:
       # 复制 Android APK
       - name: Copy Android APK
         run: |
+          mkdir -p nrfr-client/build/bin/resources
           cp app/build/outputs/apk/debug/app-debug.apk nrfr-client/build/bin/resources/nrfr.apk
           cp app/build/outputs/apk/debug/app-debug.apk nrfr-${{ steps.version.outputs.version }}.apk
         shell: bash
