@@ -15,7 +15,7 @@ android {
         versionCode = 3 //版本更新 +1
         versionName = "1.0.3" //同步更新版本号 rfr-client/app.go
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    //    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -52,11 +52,11 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
 
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+   // testImplementation("junit:junit:4.13.2")
+  //  androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    //androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+   // androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
+   // androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+  //  debugImplementation("androidx.compose.ui:ui-tooling")
+   // debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
