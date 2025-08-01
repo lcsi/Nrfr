@@ -2,6 +2,7 @@ package com.github.nrfr.manager
 
 import android.content.Context
 import android.os.Build
+import android.os.ServiceManager
 import android.os.PersistableBundle
 import android.telephony.CarrierConfigManager
 import android.telephony.SubscriptionManager
@@ -31,6 +32,7 @@ object CarrierConfigManager {
 
     private fun getCurrentConfig(subId: Int): Map<String, String> {
         try {
+            /*
             val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(
                 ShizukuBinderWrapper(
                     TelephonyFrameworkInitializer
@@ -39,6 +41,11 @@ object CarrierConfigManager {
                         .get()
                 )
             )
+            */
+
+            val binder = ServiceManager.getService("carrier_config")
+            val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(ShizukuBinderWrapper(binder))
+
             val config = carrierConfigLoader.getConfigForSubId(subId, "com.github.nrfr") ?: return emptyMap()
 
             val result = mutableMapOf<String, String>()
