@@ -90,6 +90,12 @@ jobs:
         shell: bash
 
 
+      - name: 上传制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: app/build
+          
       # # 打包发布文件
       # - name: Create Release Archive
       #   run: |
