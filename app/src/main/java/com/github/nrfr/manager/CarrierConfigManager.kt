@@ -32,17 +32,6 @@ object CarrierConfigManager {
 
     private fun getCurrentConfig(subId: Int): Map<String, String> {
         try {
-            /*
-            val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(
-                ShizukuBinderWrapper(
-                    TelephonyFrameworkInitializer
-                        .getTelephonyServiceManager()
-                        .carrierConfigServiceRegisterer
-                        .get()
-                )
-            )
-            */
-
             val binder = ServiceManager.getService("carrier_config")
             val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(ShizukuBinderWrapper(binder))
 
@@ -116,14 +105,8 @@ object CarrierConfigManager {
     }
 
     private fun overrideCarrierConfig(subId: Int, bundle: PersistableBundle?) {
-        val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(
-            ShizukuBinderWrapper(
-                TelephonyFrameworkInitializer
-                    .getTelephonyServiceManager()
-                    .carrierConfigServiceRegisterer
-                    .get()
-            )
-        )
+        val binder = ServiceManager.getService("carrier_config")
+        val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(ShizukuBinderWrapper(binder))
         carrierConfigLoader.overrideConfig(subId, bundle, true)
     }
 }
