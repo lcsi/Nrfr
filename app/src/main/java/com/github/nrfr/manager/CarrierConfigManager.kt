@@ -107,6 +107,28 @@ object CarrierConfigManager {
     private fun overrideCarrierConfig(subId: Int, bundle: PersistableBundle?) {
         val binder = ServiceManager.getService("carrier_config")
         val carrierConfigLoader = ICarrierConfigLoader.Stub.asInterface(ShizukuBinderWrapper(binder))
-        carrierConfigLoader.overrideConfig(subId, bundle, true)
+
+        // carrierConfigLoader.overrideConfig(subId, bundle, true)
+
+        try {
+            val method = carrierConfigLoader.javaClass.getMethod(
+                "overrideConfig",
+                Int::class.javaPrimitiveType,
+                PersistableBundle::class.java
+            )
+            method.invoke(carrierConfigLoader, subId, bundle)
+        } catch (e: NoSuchMethodException) {
+            // 旧系统不支持新方法，尝试调用旧版本 overrideConfig
+            try {
+                val method = carrierConfigLoader.javaClass.getMethod(
+                    "overrideConfig",
+                    Int::class.javaPrimitiveType,
+                    PersistableBundle::class.java
+                )
+                method.invoke(carrierConfigLoader, subId, bundle)
+            } catch (ex: Exception) {
+                // Log.e("CarrierConfig", "overrideConfig failed", ex)
+            }
+        }
     }
 }
