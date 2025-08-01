@@ -89,59 +89,11 @@ jobs:
           ./gradlew assembleDebug
         shell: bash
 
-      # 设置 Go 环境
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.23"
-
-      # 设置 Node.js 环境
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "21"
-
-      # 安装 Wails
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      # 构建 Wails 应用
-      - name: Build Wails App
-        run: |
-          cd nrfr-client/frontend
-          npm install
-          cd ..
-          wails build
-        shell: bash
-
-      # 下载最新的 Shizuku APK
-      - name: Download Shizuku APK
-        run: |
-          mkdir -p nrfr-client/build/bin/resources
-          curl -L $(curl -s https://api.github.com/repos/RikkaApps/Shizuku/releases/latest | grep "browser_download_url.*apk" | cut -d '"' -f 4) -o nrfr-client/build/bin/resources/shizuku.apk
-        shell: bash
-
       # 复制 Android APK
       - name: Copy Android APK
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk nrfr-client/build/bin/resources/nrfr.apk
           cp app/build/outputs/apk/debug/app-debug.apk nrfr-${{ steps.version.outputs.version }}.apk
-        shell: bash
-
-      # 下载 platform-tools
-      - name: Download platform-tools
-        run: |
-          mkdir -p nrfr-client/build/bin/platform-tools
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            curl -L https://dl.google.com/android/repository/platform-tools-latest-windows.zip -o platform-tools.zip
-          elif [ "$RUNNER_OS" == "Linux" ]; then
-            curl -L https://dl.google.com/android/repository/platform-tools-latest-linux.zip -o platform-tools.zip
-          else
-            curl -L https://dl.google.com/android/repository/platform-tools-latest-darwin.zip -o platform-tools.zip
-          fi
-          unzip platform-tools.zip
-          cp -r platform-tools/* nrfr-client/build/bin/platform-tools/
-          rm -rf platform-tools platform-tools.zip
         shell: bash
 
       # 打包发布文件
